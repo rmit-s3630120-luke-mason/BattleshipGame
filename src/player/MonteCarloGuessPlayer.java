@@ -24,11 +24,14 @@ public class MonteCarloGuessPlayer  implements Player{
     //Holds configurations for next guess. Highest number on board will be next guess
 	private int[][] configurationsBoard;
     //holds x,y values so that the next guess will be at this coordinate since previous guess was a hit
-    int l = -1;
-    int m = -1;
+    
    	//Represent the boards dimensions
     int numRow = -1;
 	int numColumn = -1;
+    //Mode activated for one guess, if previous guess was a hit
+    boolean targetMode = false;
+    int t1 = -1;
+    int t2 = -1;
     //Is board hexagonal board?
 	boolean isHex = false;
     //holds all ship objects
@@ -83,7 +86,9 @@ public class MonteCarloGuessPlayer  implements Player{
                }
             }
             //Finds all the configurations for ALL ships in specified area.
-            updateConfigurationsInArea(0,numColumn,0,numRow,a,b,c,d,s); 
+            printBoard(configurationsBoard);
+            updateConfigurationsInArea(0,numColumn,0,numRow);
+            printBoard(configurationsBoard);
         }
         else
         {
@@ -131,19 +136,18 @@ public class MonteCarloGuessPlayer  implements Player{
     {
         //initialising variables
         Guess guess = null;
-        int highestNum = 0;
-        int x = -1;
-        int y = -1;
-        if(l > -1 && m > -1)
+        if(targetMode)
         {
             guess = new Guess();
-            guess.row = l;
-            guess.column = m;
-            l = -1;
-            m = -1;
+            guess.row = t2;
+            guess.column = t1;
+            targetMode = false;
             System.out.println("\nDEBUG: myGuess. "+guess.toString());
             return guess;
         }
+        int highestNum = 0;
+        int x = -1;
+        int y = -1;
         //Getting highest number of configurations over all coordinates
         for(int i = 0; i<numColumn; i++)
         {
@@ -159,14 +163,13 @@ public class MonteCarloGuessPlayer  implements Player{
                 }
             }
         }
-        System.out.print("Bottom Right cell!! "+configurations(5, 9, 9,board));
         if(x >= 0 && y >= 0)
         {
             guess = new Guess();
             System.out.println("\nHighest Configurations = "+highestNum);
             guess.row = y;
             guess.column = x;
-            printBoard(configurationsBoard);
+            //printBoard(configurationsBoard);
             configurationsBoard[x][y] = 0;
         }
         System.out.println("DEBUG: myGuess. "+guess.toString());
@@ -191,16 +194,22 @@ public class MonteCarloGuessPlayer  implements Player{
            else
            {
                board[i][j] = 2;
-               updateConfigs(i,j); 
-               return;
+               targetMode = true;
+               Coordinate coord = updateConfigs(i,j); 
+               if(coord != null)
+               {
+                   t1 = coord.column;
+                   t2 = coord.row;
+               }
            }
         }
         else
         {
+            printBoard(configurationsBoard);
             board[i][j] = 1;
+            updateNeighboursOfCell(i,j);
+            printBoard(configurationsBoard);
         }
-        //updateConfigurationsInArea(i+4,i-4,j+4,j-4,a,b,c,d,s);
-        updateConfigurationsInArea(10,0,10,0,a,b,c,d,s);
     } // end of update()
 
 
@@ -232,42 +241,51 @@ public class MonteCarloGuessPlayer  implements Player{
     }
 
     //Getting highest configuration in neighbouring 4 tiles
-    public void updateConfigs(int x, int y)
+    public Coordinate updateConfigs(int x, int y)
     {
+        Coordinate coord = world.new Coordinate();
+
+        updateConfigurationsForCell(x,y+1);
+        updateConfigurationsForCell(x,y-1);
+        updateConfigurationsForCell(x+1,y);
+        updateConfigurationsForCell(x-1,y);
+
         int above = configurationsBoard[x][y+1];
         int below = configurationsBoard[x][y-1];
         int left = configurationsBoard[x+1][y];
         int right = configurationsBoard[x-1][y];
+        
         if(above > below && above > left && above > right)
         {
-            l = x;
-            m = y+1;
+            coord.column = x;
+            coord.row = y+1;
         }
         else if(below > above && below > left && below > right)
         {
-            l = x;
-            m = y-1;
+            coord.column = x;
+            coord.row = y-1;
         }
         else if(left > above && left > right && left > below)
         {
-            l = x+1;
-            m = y;
+            coord.column = x+1;
+            coord.row = y;
         }
         else if(right > left && right > above && right > below)
         {
-            l = x-1;
-            m = y;
+            coord.column = x-1;
+            coord.row = y;
         }
         else
         {
             //if it gets to this stage then all 4 squares around are equal
            if(above == 0)
            {
-               return;
+               return null;
            }
-            l = x;
-            m = y+1;
+            coord.column = x;
+            coord.row = y+1;
         }
+        return coord;
     }
     
    public void sinkShip(int shipNum)
@@ -323,6 +341,7 @@ public class MonteCarloGuessPlayer  implements Player{
         }
         return sunk;
     }
+
     //Returns ship object matching shipType number
     public Ship getShip(int shipType)
     {
@@ -355,36 +374,78 @@ public class MonteCarloGuessPlayer  implements Player{
         return shipNum;
     }
 
+    public void updateConfigurationsForCell(int i, int j)
+    {
+        int total = 0;
+        if(a == 1)
+        {
+            total = total + configurations(aircraftCarrier,i,j,board);
+        }
+        if(b == 1)
+        {
+            total = total + configurations(battleship,i,j,board);
+        }
+        if(c == 1)
+        {
+            total = total +  configurations(cruiser,i,j,board);
+        }
+        if(d == 1)
+        {
+            total = total + configurations(destroyer,i,j,board);
+        }
+        if(s == 1)
+        {
+            total = total + configurations(submarine,i,j,board);
+        }
+        configurationsBoard[i][j] = total;
+    }
+
+    public void updateNeighboursOfCell(int x, int y)
+    {
+        if(a == 1)
+        {
+            updateLineOfNeighboursOfCell(5,x,y);
+        }
+        else if(b == 1)
+        {
+            updateLineOfNeighboursOfCell(4,x,y);
+        }
+        else if(c == 1)
+        {
+            updateLineOfNeighboursOfCell(3,x,y);
+        }
+        else if(s == 1)
+        {
+            updateLineOfNeighboursOfCell(3,x,y);
+        }
+        else if(d == 1)
+        {
+             updateLineOfNeighboursOfCell(2,x,y);
+        }
+    }
+    
+    public void updateLineOfNeighboursOfCell(int spanningLength,int x, int y)
+    {
+        for(int i = 1; i<= spanningLength; i++)
+        {
+            updateConfigurationsForCell(x+i,y);
+            updateConfigurationsForCell(x-i,y);
+        }
+        for(int i = 1; i<= spanningLength; i++)
+        {
+            updateConfigurationsForCell(x,y+i);
+            updateConfigurationsForCell(x,y-i);
+        }
+    }
 
     //Updates the configurations in left, right, top and bottom boundaries. a,b,c,d,s = Sunk Status of ships a-s
-	public void updateConfigurationsInArea(int x1,int x2, int y1, int y2, int aa, int bb, int cc, int dd, int ss)
+	public void updateConfigurationsInArea(int x1,int x2, int y1, int y2)
     {
         for(int i = x1; i < x2; i++)
         {
             for(int j = y1; j < y2; j++)
             {
-                int total = 0;
-                if(aa == 1)
-                {
-                    total = total + configurations(aircraftCarrier,i,j,board);
-                }
-                if(bb == 1)
-                {
-                    total = total + configurations(battleship,i,j,board);
-                }
-                if(cc == 1)
-                {
-                    total = total +  configurations(cruiser,i,j,board);
-                }
-                if(dd == 1)
-                {
-                    total = total + configurations(destroyer,i,j,board);
-                }
-                if(ss == 1)
-                {
-                    total = total + configurations(submarine,i,j,board);
-                }
-                configurationsBoard[i][j] = total;
+               updateConfigurationsForCell(i,j);
             }
         }
     }
@@ -397,6 +458,7 @@ public class MonteCarloGuessPlayer  implements Player{
         int lYBoundary = y-shipLength+1;
         int hXBoundary = x+shipLength-1;
         int hYBoundary = y+shipLength-1;
+        printBoard(board);
         System.out.println("\nShip Length >> "+shipLength+" Lx = "+lXBoundary+" Hx = "+hXBoundary+" Ly = "+lYBoundary+" Hy = "+hYBoundary);
 		//Returns 0 configurations since coord has already been shot at before
 		if(board[x][y] != 0)
@@ -404,30 +466,11 @@ public class MonteCarloGuessPlayer  implements Player{
 			return 0;
 		}
 		int numConfigs = 0;
+        int numXConfigs = 0;
+        int numYConfigs = 0;
 		//configuring distance from coordinate to all board edges
-		
-        int leftSpace = 0;
-        int rightSpace = 0;
 		if(!isHex)
-		{
-	        int aboveSpace = 0;
-            int belowSpace = 0;
-			if((numRow - x)>0)
-			{
-				rightSpace = numRow - x;
-			}
-			if(x - 1 > 0)
-			{
-				leftSpace = x - 1; //Everything left of selected Square
-			}
-			if((numColumn - y)>0)
-			{
-				aboveSpace = numColumn - y;
-			}
-			if(y - 1>0)
-			{
-				belowSpace = y-1;
-			}
+		{	
             if(lXBoundary < 0)
             {
                 lXBoundary = 0;
@@ -436,21 +479,23 @@ public class MonteCarloGuessPlayer  implements Player{
             {
                 lYBoundary =0;
             }
-            if(hXBoundary > numColumn)
+            if(hXBoundary > numColumn-1)
             {
-                hXBoundary = numColumn;
+                hXBoundary = numColumn-1;
             }
-            if(hYBoundary > numRow)
+            if(hYBoundary > numRow-1)
             {
-                hYBoundary = numRow;
+                hYBoundary = numRow-1;
             }
            System.out.println("yTopRow = "+lYBoundary+" xLeftColumn = "+lXBoundary+" yBottomRow = "+hYBoundary+" xRightColumn = "+hXBoundary); 
-			for(int i = lXBoundary; i < hXBoundary; i++)
+			for(int i = lXBoundary; i <= hXBoundary; i++)
 			{
+
                 //x-1 is so that the first part of ship length fits into the current square, not joining on the end.
-                int endCoord = x-1+shipLength - i;
-                int beginningCoord = x-i;
-                if(endCoord <= numColumn-1 && beginningCoord >= 0)
+                int endCoord = lXBoundary+x-1+shipLength - i;
+                int beginningCoord = lXBoundary + x-i;
+                System.out.println("BackEndX = "+beginningCoord+" FrontEndX = "+endCoord);
+                if(endCoord <= hXBoundary && beginningCoord >= lXBoundary)
                 {
                     boolean clean = true;
                     //checking for any missedShots or sunken ship parts along the desired horizontal ship configuration
@@ -459,24 +504,22 @@ public class MonteCarloGuessPlayer  implements Player{
                         if(board[endCoord-k][y]==1 || board[endCoord-k][y]==3)
                         {
                             clean = false;
-                            k = endCoord-beginningCoord;//break
+                            System.out.println("No Config Added");
+                            break;
                         }
                     }
                     if(clean)
                     {
-                        ++numConfigs;
+                        System.out.println("Config Added");
+                        ++numXConfigs;
                     }
-                }
-                if(beginningCoord < 0)
-                {
-                    i = hXBoundary;
-                }
+                } 
             }//endFor
-            for(int j = lYBoundary; j < hYBoundary; j++)
+            for(int j = lYBoundary; j <= hYBoundary; j++)
             {
-                int topCoord = y-1+shipLength - j;
-                int bottomCoord = y - j;
-                if(topCoord <= numRow-1 && bottomCoord >=0)
+                int topCoord = lYBoundary+y-1+shipLength - j;
+                int bottomCoord = lYBoundary+y - j;
+                if(topCoord <= hYBoundary && bottomCoord >=lYBoundary)
                 {
                     boolean clean = true;
                     //Checking for any missedShots or sunken ship parts along the desired vertical ship configuration
@@ -490,19 +533,19 @@ public class MonteCarloGuessPlayer  implements Player{
                     }
                     if(clean)
                     {
-                        ++numConfigs;
+                        ++numYConfigs;
                     }
-                }
-                if(bottomCoord < 0)
-                {
-                    j = hYBoundary; //break
-                }
+                }           
             }//endFor
 		}//endIf
 		else
 		{
 			//NOT IMPLEMENTED YET
 		}
+        numConfigs = numXConfigs + numYConfigs;
+        System.out.println("Num Of X Configurations >> "+numXConfigs);
+        System.out.println("Num Of Y Configurations >> "+numYConfigs);
+        System.out.println("TOTAL Num Of Configurations >> "+numConfigs);
 		return numConfigs;
 	} //endConfigurations()
 } // end of class MonteCarloGuessPlayer
