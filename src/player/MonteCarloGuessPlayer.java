@@ -26,33 +26,39 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
    	//Represent the boards dimensions
     int numRow = -1;
 	int numColumn = -1;
-    //
+    //Represents the amount of ship parts sunk - is compared with amount of shipsParts currently hit
     int sunkCount = 0;
-    //
+    //holds the direction of what the next shot should be in a straight line, x=1,0 or -1 and y=1,0 or -1 | {0,0} = x,y
     int[] direction = {0,0};
     //Mode activated for one guess, if previous guess was a hit
     boolean inTargetMode = false;
+    //shows if direction has already changed, help stop a loop of constantly changing direction in a loop
     boolean reverseAdd = false;
+    //Becomes true if the next shot in the current direction is off the board, so is predicted to be a miss, variable used to go to next update() IF statement
     boolean skipPrediction = false;
+    //represents the index of hitCoords, is used to be referred back to original coordinate or previously hit coordinate
     int partCheck = 0;
+    //Represents coords for next guess, updated by the update()
     int t1 = -1;
     int t2 = -1;
     //Is board hexagonal board?
 	boolean isHex = false;
     //holds all ship objects
     ArrayList<Ship> allShips = new ArrayList<>();
-    //lengths of each ship(max ship hit counter) [this players ships]
+    //lengths of each ship(max ship hit counter) [this players ships], this is the lives counter for each ship
     int aircraftCarrier = 5;
     int battleship = 4;
     int submarine = 3;
     int cruiser = 3;
     int destroyer = 2;
     //These represent the Status of each ship owned by opponent, 1 = alive, 0 = sunk
-    int a = 1;
-    int b = 1;
-    int c = 1;
-    int d = 1;
-    int s = 1;
+    int a = 1;//a = aircraftCarrier
+    int b = 1;//b = battleship
+    int c = 1;//c = cruiser
+    int d = 1;//d = destroyer
+    int s = 1;//s = submarine
+
+
 	@Override
     public void initialisePlayer(World world) {
     	if(!world.isHex)
@@ -65,8 +71,8 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
             //Assign board dimensions
             if(board.length > 0)
             {
-                numRow = board.length;
-                numColumn = board[0].length;	
+                numRow = board[0].length;
+                numColumn = board.length;	
             }
             //initialising the three boards
             for(int i =0; i< numColumn; i++)
@@ -82,42 +88,20 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
             ArrayList<ShipLocation> ships = world.shipLocations;
             for(ShipLocation ship: ships)
             {
-                allShips.add(ship.ship);
+               allShips.add(ship.ship);//adding ship object to arraylist
                int shipTypeNum = getShipNum(ship.ship.name());
                ArrayList<Coordinate> coords = ship.coordinates;
-               for(Coordinate coord: coords)
+               for(Coordinate coord: coords)//for each ship, adding each coordinate to myShipBoard
                { 
-                    shipBoard[coord.column][coord.row] = shipTypeNum;
+                    shipBoard[coord.column][coord.row] = shipTypeNum;//assignes the shipType a number which is put on the board at said coordinate
                }
             }
             //Finds all the configurations for ALL ships in specified area.
-            printBoard(configurationsBoard);
             updateConfigurationsInArea(0,numColumn,0,numRow);
-            printBoard(configurationsBoard);
-            System.out.println("-------------------------------");
-            //Testing Purposes
-           /* printBoard(shipBoard);
-            board[5][5] = 1;
-            configurationsBoard[5][5] = 0;
-            updateNeighboursOfCell(5,5);
-            printBoard(board);
-            printBoard(configurationsBoard);
-            board[5][5] = 3;
-            configurationsBoard[5][5] = 0;
-            updateNeighboursOfCell(5,5);
-            printBoard(board);
-            printBoard(configurationsBoard);
-            board[6][4] = 1;
-            configurationsBoard[6][4] = 0;
-            updateNeighboursOfCell(6,4);
-            printBoard(board);
-            printBoard(configurationsBoard);*/
-
         }
         else
         {
             isHex = true;
-            //board = 
         }
     } // end of initialisePlayer()
 
@@ -148,12 +132,8 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
         {
             answer.isHit = false;
         }
-       // System.out.println("\nDEBUG: OpponentGuess >> "+guess.toString());
-       // System.out.println("DEBUG: Answer >> "+answer.toString());
-       //printBoard(shipBoard);
         return answer;
     } // end of getAnswer()
-
 
     @Override
     public Guess makeGuess() 
@@ -162,38 +142,33 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
         Guess guess = null;
         if(inTargetMode)
         {
-            System.out.println("target mode = "+inTargetMode);
             guess = new Guess();
-            System.out.println("t1 = "+t1+" t2 = "+t2);
             guess.row = t2;
             guess.column = t1;
-            System.out.println("DEBUG: myGuess. "+guess.toString()+"\n");
-            printBoard(configurationsBoard);
-            if(board[t1][t2] > 0)
-            {
-                System.out.println("ABOUT TO SHOOT AT BOARD INCORRECTLY!!!!!!~~~~~~~~~~~~~~~~~~~~~~~~~~~~");               
-            }
-            if(configurationsBoard[t1][t2] == 0)
-            {
-                System.out.println("ABOUTN TO SHOOT AT CONFIGS!!!!!! 0 !!!! @@@@@@@@@@@@@@@@@@@@@@@@@");
-            }
             return guess;
         }
-        System.out.println("target mode = "+inTargetMode);
+        //initialising coords for cell and highest number of configs
         int highestNum = 0;
         int x = -1;
         int y = -1;
-        //Getting highest number of configurations over all coordinates
-        printBoard(board);
-        printBoard(configurationsBoard);
+        //Contest for Getting highest number of configurations against all coordinates
         for(int i = 0; i<numColumn; i++)
         {
             for(int j = 0; j <numRow; j++)
             {
-                int configs = configurationsBoard[i][j];
-                if(configs>highestNum)             
+                int configs = configurationsBoard[i][j];//getting num configurations for contending cell
+                if(configs == highestNum)//Randomly pick one cell to be next highestNumCell
                 {
-                    System.out.println(configs+" is bigger than "+highestNum);
+                    Random rand = new Random();
+                    int n = rand.nextInt(2);
+                    if(n == 0)//if 0 then config cell
+                    {
+                        x = i;
+                        y = j;
+                    }
+                }
+                else if(configs>highestNum)             
+                {
                     //Assigning highest number and coordinates of that number
                     highestNum = configs;
                     x = i;
@@ -201,26 +176,9 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
                 }
             }
         }
-        //System.out.println("HERE 1");
-        System.out.println("Ships status: a = "+a+" b = "+b+" c = "+c+" d = "+d+" s = "+s); 
-        
-        System.out.println("x = "+x+" y = "+y);
         guess = new Guess();
-        System.out.println("Highest Configurations = "+highestNum);
         guess.row = y;
         guess.column = x;
-        printBoard(configurationsBoard);
-        System.out.println("DEBUG: myGuess. "+guess.toString()+"\n");
-        
-        /*
-            if(board[x][y] > 0)
-            {
-                System.out.println("ABOUT TO SHOOT AT BOARD INCORRECTLY!!!!!!~~~~~~~~~~~~~~~~~~~~~~~~~~~~");               
-            }
-            if(configurationsBoard[x][y] == 0)
-            {
-                System.out.println("ABOUTN TO SHOOT AT CONFIGS!!!!!! 0 !!!! @@@@@@@@@@@@@@@@@@@@@@@@@");
-            }*/
         return guess;
     } // end of makeGuess()
 
@@ -230,22 +188,20 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
     {
         int i = guess.column;
         int j = guess.row;
-        configurationsBoard[i][j] = 0;
+        configurationsBoard[i][j] = 0;//Assignes previously guessed coordinate as 'guessed' (0)
         if(answer.shipSunk == null && answer.isHit && inTargetMode)//if ship is not sunk and guess was a hit and was already in targeting mode
         {
-            //streak underway!
-            System.out.println("hit, still in target mode, shooting in next direction");                                    
-            board[i][j] = 2;
+            board[i][j] = 2;//assignes board as a hitShip
             Coordinate coord = world.new Coordinate();
             coord.column = i;
             coord.row = j;
-            hitCoords.add(coord);         
-            int k = coord.column + direction[0];
+            hitCoords.add(coord);//Adds hit ship's coords to an arrayList         
+            int k = coord.column + direction[0];//assignes next coordinate by adding direction onto previous guess
             int l = coord.row + direction[1];
-            boolean help = false;
-            if(k<numColumn && k >=0 && l<numRow && l >=0)
+            boolean help = false;//initilising
+            if(k<numColumn && k >=0 && l<numRow && l >=0)//checking if guess would end up out of the board's range
             {
-                if(board[k][l] == 0)
+                if(board[k][l] == 0)//checking if coordinate on board has not been guessed before
                 {
                     t1 = k;
                     t2 = l;   
@@ -260,127 +216,95 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
         }
         if((!answer.isHit && inTargetMode)||skipPrediction)//if miss but still targeting detected ship
         {
-            System.out.println("Missed but still seeking");
-            if(!skipPrediction)
+            if(!skipPrediction)//if not from if statement above
             {
                 board[i][j] = 1;
                 updateNeighboursOfCell(i,j);
-                //updateConfigurationsInArea(0,numColumn,0,numRow);
             }
-            skipPrediction = false;
-            //System.out.println("d0 = "+direction[0]);
-            //System.out.println("d1 = "+direction[1]);
+            skipPrediction = false;//reset
             //reverse direction
             direction[0] = direction[0]*-1;
             direction[1] = direction[1]*-1;
-            
-            //System.out.println("Reverse--");
-           // System.out.println("d0 = "+direction[0]);
-           // System.out.println("d1 = "+direction[1]);
-            int k = hitCoords.get(partCheck).column;
+            int k = hitCoords.get(partCheck).column;//assigning coords to the coords of specified hitShip part in hitCoords (checking back on old coordinate)
             int l = hitCoords.get(partCheck).row;
-            int c = k + direction[0];
+            int c = k + direction[0];//Adding the new reversed direction onto previously known shipPart coord, but now checking for beyond it in other direction
             int r = l + direction[1];
-            boolean help = false;
-            if(c < numColumn && r < numRow && c >= 0 && r >= 0)
-            {              
-               System.out.println("in Reverse Already? = "+reverseAdd); 
+            boolean help = false;//initialise
+            if(c < numColumn && r < numRow && c >= 0 && r >= 0)//checking if cell beyond shipPart is within board boundaries
+            {             
+                //checking if the reverse direction has already been reversed, stops constant reversing loop also checks if guess has not been made before
                 if(board[c][r] == 0 && !reverseAdd)
                 {
                     reverseAdd = true;
-                    t1 = c;
+                    t1 = c;//assigning next guess coords
                     t2 = r;   
                 }else{help = true;}                
             }else{help = true;}
             if(help)
             {
                 reverseAdd = false;
-                System.out.println("start searching >> "+k+","+l);
-                printBoard(configurationsBoard);
                 Coordinate coord = startSearchConfigs(k,l);
-                System.out.println("Chose next shot = "+coord.column+","+coord.row);
                 t1 = coord.column;
                 t2 = coord.row;
             }                        
         }
         else if(!inTargetMode && answer.isHit)//if first hit
         {
-            System.out.println("NEW HIT!");
             inTargetMode = true;
-            board[i][j] = 2;
+            board[i][j] = 2;//assigning guessed shot coords to be a hitShip
             Coordinate coord = world.new Coordinate();
             coord.column = i;
             coord.row = j;
-            hitCoords = new ArrayList<>();
-            hitCoords.add(coord);          
-            Coordinate coord2 = startSearchConfigs(i,j); 
-            t1 = coord2.column;
+            hitCoords = new ArrayList<>();//Making new hitList for the hit ship Part coordinates to be hunted down and recorded
+            hitCoords.add(coord);//Adding first hit to hitCoords List          
+            Coordinate coord2 = startSearchConfigs(i,j); //Start the search around that hit coordinate
+            t1 = coord2.column;//Assigning next guess coords
             t2 = coord2.row;
-            System.out.println("Shooting at "+t1+","+t2);
         }
-        else if(answer.shipSunk != null && answer.isHit && inTargetMode)
+        else if(answer.shipSunk != null && answer.isHit && inTargetMode)//if hit AND it sunk a ship
         {
-           System.out.println("Ships status: a = "+a+" b = "+b+" c = "+c+" d = "+d+" s = "+s); 
-            int type = getShipNum(answer.shipSunk.name());
-            sinkShip(type);
-            board[i][j] = 2;
-            System.out.println("HIT AND SUNK - "+answer.shipSunk.name());            
-            //printBoard(board);
+            int type = getShipNum(answer.shipSunk.name());//getting the ship Type that was hit
+            sinkShip(type);//makes shipType status = 0; (sunk)
+            board[i][j] = 2;//assignes hit Coords as hit ship Part
             Coordinate coord = world.new Coordinate();
             coord.column = i;
             coord.row = j;
-            hitCoords.add(coord);                     
-            sunkCount = sunkCount + answer.shipSunk.len();            
-            System.out.println("Ship Length sunk = "+answer.shipSunk.len());
-            System.out.println("sunkCount = "+sunkCount+" coord List size = "+hitCoords.size());           
-           System.out.println("Ships status: a = "+a+" b = "+b+" c = "+c+" d = "+d+" s = "+s); 
-            if(sunkCount == hitCoords.size())
+            hitCoords.add(coord);//Adds hit ship part to List
+            sunkCount = sunkCount + answer.shipSunk.len();//Adds total sunk ship parts to sunk count            
+            if(sunkCount == hitCoords.size())//Checking if sunk ship parts = hit ship parts
             {
                 inTargetMode = false;
-                System.out.println("hitCoords SIZE = "+hitCoords.size());
                 for(int q = 0; q < hitCoords.size(); q++)//makes all coords sunk
                 {
-                    //System.out.println(hitCoords.get(q).column+","+hitCoords.get(q).row);
                     board[hitCoords.get(q).column][hitCoords.get(q).row] = 3;
                     updateNeighboursOfCell(hitCoords.get(q).column,hitCoords.get(q).row);
                     sunkCount--;
-                    //System.out.println("get(0) is now "+hitCoords.get(q).column+","+hitCoords.get(q).row);
-                    //System.out.println("sunkCount = "+sunkCount);
                 }
                 //updateConfigurationsInArea(0,numColumn,0,numRow);
                 hitCoords.clear();
-                printBoard(board);
                 partCheck = 0; 
             }  
-            else
+            else //here means that the sunk ship's exact coords are unknown since there is some unsunk ship parts to be sunk still
             {
-                Coordinate shipPiece = hitCoords.get(partCheck);
-                Coordinate coord2 = startSearchConfigs(shipPiece.column,shipPiece.row);
-                t1 = coord2.column;
+                Coordinate shipPiece = hitCoords.get(partCheck);//get original hit coords
+                Coordinate coord2 = startSearchConfigs(shipPiece.column,shipPiece.row);//starts search again from original hit
+                t1 = coord2.column;//assignes next guess coords
                 t2 = coord2.row;
             }
             reverseAdd = false;
         }
 
-        if(!inTargetMode && !answer.isHit)
+        if(!inTargetMode && !answer.isHit)//if shot was a miss and there is no lead 
         {
-            System.out.println("Shot was not a hit :( ");
-           // printBoard(board);
-           // printBoard(configurationsBoard);
-            board[i][j] = 1;
-           // printBoard(board);
-            updateNeighboursOfCell(i,j);
-             System.out.println("Ships status: a = "+a+" b = "+b+" c = "+c+" d = "+d+" s = "+s);
-            //updateConfigurationsInArea(0,numColumn,0,numRow);
-            //System.out.println("after update neighbours");
-            //printBoard(configurationsBoard);
+            board[i][j] = 1;//assign guess as a miss on board
+            updateNeighboursOfCell(i,j);//update the neighbouring cell configurations, since it was a miss
         }
     } // end of update()
 
 
     @Override
     public boolean noRemainingShips() {
-        if(aircraftCarrier < 1 && battleship < 1 && cruiser < 1 && destroyer < 1 && submarine < 1)
+        if(aircraftCarrier < 1 && battleship < 1 && cruiser < 1 && destroyer < 1 && submarine < 1)//checking if all lives of all ships = 0
         {
             return true;
         }
@@ -390,7 +314,7 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
         }
     } // end of noRemainingShips
     
-    public void printBoard(int[][] board)
+    public void printBoard(int[][] board)//Used for testing purposes, prints out given board
     {
         int length = board.length;
         int height = board[0].length;
@@ -405,89 +329,85 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
         System.out.println("\n");
     }
 
-    //Getting highest configuration in neighbouring 4 tiles
+    //Getting highest configuration in neighbouring 4 tiles around coord
     public Coordinate startSearchConfigs(int x, int y)
     {
         Coordinate coord = world.new Coordinate();
+        //initialising
         int above = -1;
         int below = -1;
         int left = -1;
         int right = -1; 
-        if(x+1 < numColumn && y+1 < numRow && x-1 >= 0 && y-1 >=0)
+        if(x+1 < numColumn && y+1 < numRow && x-1 >= 0 && y-1 >=0)//I think this might not be necarserry
         {
             updateConfigurationsForCell(x,y+1);
             updateConfigurationsForCell(x,y-1);
             updateConfigurationsForCell(x+1,y);
             updateConfigurationsForCell(x-1,y);
         }
-        //System.out.println("Updated 4 squares around previous hit coords");
-        //printBoard(configurationsBoard);
         
-        if(y+1 < numColumn)
+        if(y+1 < numColumn)//checking if cell above is within bounds
         {
             updateConfigurationsForCell(x,y+1);
-            above = configurationsBoard[x][y+1];
+            above = configurationsBoard[x][y+1];//gettting configurations for above cell
         }
-        if(y-1>=0)
+        if(y-1>=0)//checking if cell below is within bounds
         {
             updateConfigurationsForCell(x,y-1);
-            below = configurationsBoard[x][y-1];
+            below = configurationsBoard[x][y-1];//getting configurations for below cell
         }
-        if(x+1<numColumn)
+        if(x+1<numColumn)//checking if cell to the left is within bounds
         {
             updateConfigurationsForCell(x+1,y);
-            left = configurationsBoard[x+1][y];
+            left = configurationsBoard[x+1][y];//gettting configurations for left cell
         }
-        if(x-1>=0)
+        if(x-1>=0)//checking if cell to the right is with in bounds
         {
             updateConfigurationsForCell(x-1,y);
-            right = configurationsBoard[x-1][y];
+            right = configurationsBoard[x-1][y];//gettting configurations for right cell
         }
-        int max1 = Math.max(above,below);
-        int max2 = Math.max(left,right);
-        int max = Math.max(max1,max2);
+        int max1 = Math.max(above,below);//getting maximum semi-finals
+        int max2 = Math.max(left,right);//getting maximum semi-finals
+        int max = Math.max(max1,max2);//gettting maximum grand-finals
         if(above == max)
         {
-            direction[0] = 0;
+            direction[0] = 0;//setting direction for North
             direction[1] = 1;
-            coord.column = x;
+            coord.column = x;//setting coord for above cell
             coord.row = y+1;
         }
         else if(below == max)
         {
-            direction[0] = 0;
+            direction[0] = 0;//setting direction for South
             direction[1] = -1;
-            coord.column = x;
+            coord.column = x;//setting coord for below cell
             coord.row = y-1;
         }
         else if(left == max)
         {
-            direction[0] = 1;
+            direction[0] = 1;//setting direction for West
             direction[1] = 0;
-            coord.column = x+1;
+            coord.column = x+1;//setting coord for left cell
             coord.row = y;
         }
         else if(right == max)
         {
-            direction[0] = -1;
+            direction[0] = -1;//setting direction for East
             direction[1] = 0;
-            coord.column = x-1;
+            coord.column = x-1;//setting coord for right cell
             coord.row = y;
         }
-        if(max < 1)
+        if(max < 1)//checking if the max configurations between all 4 cells is 0
         {
-            System.out.println("All squares around "+x+","+y+" are 0");
-            printBoard(configurationsBoard);
-            printBoard(board);
             //if it gets to this stage then all 4 squares around are equal
-            ++partCheck;
+            ++partCheck;//Because original hit has no more possible leads, the index is increased by 1 to see if the next hit has any leads on potential shipParts
             Coordinate coord2 = hitCoords.get(partCheck); 
-            coord = startSearchConfigs(coord2.column,coord2.row);
+            coord = startSearchConfigs(coord2.column,coord2.row);//selfcalls to get coordinate of next previously hit ship part in list
         }
         return coord;
     }
     
-   public void sinkShip(int shipNum)
+   public void sinkShip(int shipNum)//sinks given ship type (makes status = 0)
     {
         switch(shipNum)
         {
@@ -504,36 +424,36 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
     {
         boolean sunk = false;
         if(shipType == 1){
-           aircraftCarrier--;
-           if(aircraftCarrier < 1)
+           aircraftCarrier--;//minus 1 part from aircraftCarrier
+           if(aircraftCarrier < 1)//check if it has sunk (0 parts left)
            {
                 sunk = true;
            }
         }
         else if(shipType == 2){
-            battleship--;
-            if(battleship < 1)
+            battleship--;//minus 1 part from battleship
+            if(battleship < 1)//check if it has sunk (0 parts left)
             {
                 sunk = true;
             }
         }
         else if(shipType == 3){
-           cruiser--;
-           if(cruiser < 1)
+           cruiser--;//minus 1 part from cruiser
+           if(cruiser < 1)//check if it has sunk (0 parts left)
            {
                sunk = true;
            }
         }
         else if(shipType == 4){
-            destroyer--;
-            if(destroyer < 1)
+            destroyer--;//minus 1 part from destroyer
+            if(destroyer < 1)//check if it has sunk (0 parts left)
             {
                 sunk = true;
             } 
         }
         else if(shipType == 5){
-            submarine--;
-            if(submarine < 1)
+            submarine--;//minus 1 part from submarine
+            if(submarine < 1)//check if it has sunk (0 parts left)
             {
                 sunk = true;
             }
@@ -573,106 +493,84 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
         return shipNum;
     }
 
-    public void updateConfigurationsForCell(int i, int j)
+    public void updateConfigurationsForCell(int i, int j)//updates configs for given cell for all ALIVE ships only, not sunk ships
     {
         int total = 0;
         if(a == 1)
         {
-            System.out.println("a");
             total = total + configurations(5,i,j,board);
         }
         if(b == 1)
         {
-            System.out.println("b");
             total = total + configurations(4,i,j,board);
         }
         if(c == 1)
         {
-            System.out.println("c");
             total = total +  configurations(3,i,j,board);
         }
         if(d == 1)
         {
-            System.out.println("d");
             total = total + configurations(2,i,j,board);
         }
         if(s == 1)
         {
-            System.out.println("s");
             total = total + configurations(3,i,j,board);
         }        
-        configurationsBoard[i][j] = total;
-        /*if(total == 0 && board[i][j] != 1)
-        {
-            board[i][j] = 1;
-            System.out.println("Assigned "+i+","+j+" as miss 1, because 0 configs for cell");
-            updateNeighboursOfCell(i,j);
-        }*/
+        configurationsBoard[i][j] = total;//returns total possible ships (configurations - configs)
     }
 
-    public void updateNeighboursOfCell(int x, int y)
+    public void updateNeighboursOfCell(int x, int y)//updates configurations of cells, around given cell coords, with radius of largest alive ship
     {
         if(a == 1)
         {
-            System.out.println("updating neighbours 5 away");
             updateLineOfNeighboursOfCell(5,x,y);
         }
         else if(b == 1)
         {
-            System.out.println("updating neighbours 4 away");
             updateLineOfNeighboursOfCell(4,x,y);
         }
         else if(c == 1)
         {
-            System.out.println("updating neighbours 3 away");
             updateLineOfNeighboursOfCell(3,x,y);
         }
         else if(s == 1)
         {
-            System.out.println("updating neighbours 3 away");
             updateLineOfNeighboursOfCell(3,x,y);
         }
         else if(d == 1)
         {
-            System.out.println("updating neighbours 2 away");
             updateLineOfNeighboursOfCell(2,x,y);
         }
     }
     
-    public void updateLineOfNeighboursOfCell(int spanningLength,int x, int y)
+    public void updateLineOfNeighboursOfCell(int spanningLength,int x, int y)//updates a line of cells' configuration, spanning a given length from coordinate
     {
-        //System.out.println("Updating the x values");
         for(int i = 1; i< spanningLength; i++)
         {
             if(x+i < numColumn)
             {
-                //System.out.println((x+i)+","+y);
                 updateConfigurationsForCell(x+i,y);
             }
             if(x-i >= 0)
             {                
-                //System.out.println((x-i)+","+y);
                 updateConfigurationsForCell(x-i,y);
             }
         }
-        //System.out.println("Updating the y values");
         for(int i = 1; i< spanningLength; i++)
         {
             if(y+i < numRow)
             {
-                //System.out.println(x+","+(y+i));
                 updateConfigurationsForCell(x,y+i);
             }
             if(y-i >= 0)
             {
-                //System.out.println(x+","+(y-i));
                 updateConfigurationsForCell(x,y-i);
             }
         }
     }
 
-    //Updates the configurations in left, right, top and bottom boundaries. a,b,c,d,s = Sunk Status of ships a-s
-	public void updateConfigurationsInArea(int x1,int x2, int y1, int y2)
+    //Updates the configurations in left, right, top and bottom board boundaries.
+    public void updateConfigurationsInArea(int x1,int x2, int y1, int y2)
     {
         for(int i = x1; i < x2; i++)
         {
@@ -691,8 +589,6 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
         int lYBoundary = y-shipLength+1;
         int hXBoundary = x+shipLength-1;
         int hYBoundary = y+shipLength-1;
-        //printBoard(board);
-        //System.out.println("\nShip Length >> "+shipLength+" Lx = "+lXBoundary+" Hx = "+hXBoundary+" Ly = "+lYBoundary+" Hy = "+hYBoundary);
 		//Returns 0 configurations since coord has already been shot at before
 		if(board[x][y] != 0)
 		{
@@ -720,31 +616,27 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
             {
                 hYBoundary = numRow-1;
             }
-          // System.out.println("yTopRow = "+lYBoundary+" xLeftColumn = "+lXBoundary+" yBottomRow = "+hYBoundary+" xRightColumn = "+hXBoundary); 
 			for(int i = lXBoundary; i <= hXBoundary; i++)
 			{
 
                 //x-1 is so that the first part of ship length fits into the current square, not joining on the end.
                 int endCoord = lXBoundary+x-1+shipLength - i;
                 int beginningCoord = lXBoundary + x-i;
-          //      System.out.println("BackEndX = "+beginningCoord+" FrontEndX = "+endCoord);
                 if(endCoord <= hXBoundary && beginningCoord >= lXBoundary)
                 {
                     boolean clean = true;
                     //checking for any missedShots or sunken ship parts along the desired horizontal ship configuration
                     for(int k = 0; k<=(endCoord - beginningCoord); k++)
                     {
-                        if(board[endCoord-k][y]==1 || board[endCoord-k][y]==3)
+                        if(board[endCoord-k][y]==1 || board[endCoord-k][y]==3)//checking if there is any misses or sunk ship parts in possible configuration
                         {
                             clean = false;
-        //                    System.out.println("No Config Added");
                             break;
                         }
                     }
                     if(clean)
                     {
-      //                  System.out.println("Config Added");
-                        ++numXConfigs;
+                        ++numXConfigs;//adds one possible configuration of ship
                     }
                 } 
             }//endFor
@@ -776,9 +668,6 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
 			//HEX BOARD NOT IMPLEMENTED
 		}
         numConfigs = numXConfigs + numYConfigs;
-//        System.out.println("Num Of X Configurations >> "+numXConfigs);
-  //      System.out.println("Num Of Y Configurations >> "+numYConfigs);
-    //    System.out.println("TOTAL Num Of Configurations >> "+numConfigs);
 		return numConfigs;
 	} //endConfigurations()
 } // end of class MonteCarloGuessPlayer
