@@ -96,7 +96,7 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
             printBoard(configurationsBoard);
             System.out.println("-------------------------------");
             //Testing Purposes
-          /*  printBoard(shipBoard);
+           /* printBoard(shipBoard);
             board[5][5] = 1;
             configurationsBoard[5][5] = 0;
             updateNeighboursOfCell(5,5);
@@ -425,18 +425,22 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
         
         if(y+1 < numColumn)
         {
+            updateConfigurationsForCell(x,y+1);
             above = configurationsBoard[x][y+1];
         }
         if(y-1>=0)
         {
+            updateConfigurationsForCell(x,y-1);
             below = configurationsBoard[x][y-1];
         }
         if(x+1<numColumn)
         {
+            updateConfigurationsForCell(x+1,y);
             left = configurationsBoard[x+1][y];
         }
         if(x-1>=0)
         {
+            updateConfigurationsForCell(x-1,y);
             right = configurationsBoard[x-1][y];
         }
         int max1 = Math.max(above,below);
@@ -574,23 +578,28 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
         int total = 0;
         if(a == 1)
         {
-            total = total + configurations(aircraftCarrier,i,j,board);
+            System.out.println("a");
+            total = total + configurations(5,i,j,board);
         }
         if(b == 1)
         {
-            total = total + configurations(battleship,i,j,board);
+            System.out.println("b");
+            total = total + configurations(4,i,j,board);
         }
         if(c == 1)
         {
-            total = total +  configurations(cruiser,i,j,board);
+            System.out.println("c");
+            total = total +  configurations(3,i,j,board);
         }
         if(d == 1)
         {
-            total = total + configurations(destroyer,i,j,board);
+            System.out.println("d");
+            total = total + configurations(2,i,j,board);
         }
         if(s == 1)
         {
-            total = total + configurations(submarine,i,j,board);
+            System.out.println("s");
+            total = total + configurations(3,i,j,board);
         }        
         configurationsBoard[i][j] = total;
         /*if(total == 0 && board[i][j] != 1)
@@ -633,7 +642,7 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
     public void updateLineOfNeighboursOfCell(int spanningLength,int x, int y)
     {
         //System.out.println("Updating the x values");
-        for(int i = 1; i<= spanningLength; i++)
+        for(int i = 1; i< spanningLength; i++)
         {
             if(x+i < numColumn)
             {
@@ -647,7 +656,7 @@ public class MonteCarloGuessPlayer  implements Player{//Check if update neighbou
             }
         }
         //System.out.println("Updating the y values");
-        for(int i = 1; i<= spanningLength; i++)
+        for(int i = 1; i< spanningLength; i++)
         {
             if(y+i < numRow)
             {
